@@ -25,6 +25,7 @@ import me.rerere.ai.util.KeyRoulette
 import me.rerere.ai.util.configureClientWithProxy
 import me.rerere.ai.util.json
 import me.rerere.ai.util.mergeCustomBody
+import me.rerere.ai.util.addAuthorizationHeader
 import me.rerere.ai.util.toHeaders
 import me.rerere.common.http.await
 import me.rerere.common.http.getByKey
@@ -49,7 +50,7 @@ class OpenAIProvider(
             val key = keyRoulette.next(providerSetting.apiKey)
             val request = Request.Builder()
                 .url("${providerSetting.baseUrl}/models")
-                .addHeader("Authorization", "Bearer $key")
+                .addAuthorizationHeader(providerSetting.baseUrl, key)
                 .get()
                 .build()
 
@@ -83,7 +84,7 @@ class OpenAIProvider(
         }
         val request = Request.Builder()
             .url(url)
-            .addHeader("Authorization", "Bearer $key")
+            .addAuthorizationHeader(url, key)
             .get()
             .build()
         val response = client.configureClientWithProxy(providerSetting.proxy).newCall(request).await()
@@ -166,7 +167,7 @@ class OpenAIProvider(
         val request = Request.Builder()
             .url("${providerSetting.baseUrl}/images/generations")
             .headers(params.customHeaders.toHeaders())
-            .addHeader("Authorization", "Bearer $key")
+            .addAuthorizationHeader(providerSetting.baseUrl, key)
             .addHeader("Content-Type", "application/json")
             .post(requestBody.toRequestBody("application/json".toMediaType()))
             .build()
