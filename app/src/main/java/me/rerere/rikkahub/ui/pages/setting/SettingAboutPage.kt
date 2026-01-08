@@ -60,7 +60,7 @@ fun SettingAboutPage() {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val context = LocalContext.current
     val navController = LocalNavController.current
-    val emojiOptions = remember { listOf("🎉", "✨", "🌟", "💫", "🎊", "🥳", "🇨🇳", "🤗", "🤡", "🌏", "🍉") }
+    val emojiOptions = remember { listOf("🍆", "🍑", "💦", "🥵", "🔞", "🇷🇺", "🫦", "🔥", "😏", "👅", "🍒") }
     var logoCenterPx by remember { mutableStateOf(Offset.Zero) }
     Scaffold(
         topBar = {
@@ -115,7 +115,7 @@ fun SettingAboutPage() {
                         )
 
                         Text(
-                            text = "RikkaHub",
+                            text = "RikkaHuy",
                             style = MaterialTheme.typography.displaySmall,
                         )
 
@@ -127,6 +127,7 @@ fun SettingAboutPage() {
                             ),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
+                            /*
                             IconButton(
                                 onClick = {
                                     context.joinQQGroup("wMdqlDETtzIz6o49HrBR2TeQlwcX6RH9")
@@ -150,6 +151,7 @@ fun SettingAboutPage() {
                                     tint = MaterialTheme.colorScheme.secondary
                                 )
                             }
+                            */
                         }
                     }
                 }
@@ -194,6 +196,7 @@ fun SettingAboutPage() {
                     )
                 }
 
+                /*
                 item {
                     ListItem(
                         headlineContent = {
@@ -212,6 +215,7 @@ fun SettingAboutPage() {
                         }
                     )
                 }
+                */
 
                 item {
                     ListItem(
@@ -220,11 +224,11 @@ fun SettingAboutPage() {
                         },
                         supportingContent = {
                             Text(
-                                text = "https://github.com/rikkahub/rikkahub"
+                                text = "https://github.com/I-i-I-iIi-I-i-I/rikkahuy"
                             )
                         },
                         modifier = Modifier.clickable {
-                            context.openUrl("https://github.com/rikkahub/rikkahub")
+                            context.openUrl("https://github.com/I-i-I-iIi-I-i-I/rikkahuy")
                         },
                         leadingContent = {
                             Icon(Lucide.Github, null)
@@ -232,22 +236,24 @@ fun SettingAboutPage() {
                     )
                 }
 
+                /*
                 item {
                     ListItem(
                         headlineContent = {
                             Text(stringResource(R.string.about_page_license))
                         },
                         supportingContent = {
-                            Text("https://github.com/rikkahub/rikkahub/blob/master/LICENSE")
+                            Text("https://github.com/I-i-I-iIi-I-i-I/rikkahuy/blob/master/LICENSE")
                         },
                         leadingContent = {
                             Icon(Lucide.FileText, null)
                         },
                         modifier = Modifier.clickable {
-                            context.openUrl("https://github.com/rikkahub/rikkahub/blob/master/LICENSE")
+                            context.openUrl("https://github.com/I-i-I-iIi-I-i-I/rikkahuy/blob/master/LICENSE")
                         }
                     )
                 }
+                */
             }
         }
     }
