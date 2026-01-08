@@ -332,6 +332,7 @@ fun SettingPage(vm: SettingVM = koinViewModel()) {
                 )
             }
 
+            /*
             item {
                 SettingItem(
                     navController = navController,
@@ -372,6 +373,7 @@ fun SettingPage(vm: SettingVM = koinViewModel()) {
                     }
                 )
             }
+            */
         }
     }
 }
