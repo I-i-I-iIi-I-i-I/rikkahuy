@@ -404,6 +404,7 @@ data class DisplaySetting(
     val pasteLongTextAsFile: Boolean = false,
     val pasteLongTextThreshold: Int = 1000,
     val sendOnEnter: Boolean = false,
+    val hideTtsButton: Boolean = false,
 )
 
 @Serializable

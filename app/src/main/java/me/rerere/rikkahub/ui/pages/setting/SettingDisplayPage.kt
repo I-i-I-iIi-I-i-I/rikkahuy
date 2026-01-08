@@ -653,6 +653,27 @@ fun SettingDisplayPage(vm: SettingVM = koinViewModel()) {
                 )
             }
 
+            // Твоя локальная настройка (hideTtsButton) перенесена в раздел TTS
+            item {
+                ListItem(
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    headlineContent = {
+                        Text(stringResource(R.string.setting_display_page_hide_tts_button_title))
+                    },
+                    supportingContent = {
+                        Text(stringResource(R.string.setting_display_page_hide_tts_button_desc))
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = displaySetting.hideTtsButton,
+                            onCheckedChange = {
+                                updateDisplaySetting(displaySetting.copy(hideTtsButton = it))
+                            }
+                        )
+                    },
+                )
+            }
+
             item {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),

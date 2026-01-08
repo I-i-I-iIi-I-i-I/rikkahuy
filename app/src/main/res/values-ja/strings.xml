@@ -702,6 +702,8 @@
   <string name="injection_selector_lorebooks_empty">利用可能なロアブックがありません</string>
   <string name="setting_display_page_show_line_numbers_title">行番号を表示</string>
   <string name="setting_display_page_show_line_numbers_desc">コードブロックに行番号を表示</string>
+  <string name="setting_display_page_hide_tts_button_title">TTSボタンを非表示</string>
+  <string name="setting_display_page_hide_tts_button_desc">アシスタントメッセージの下にある音声読み上げボタンを非表示にする</string>
   <string name="export_title">エクスポート</string>
   <string name="export_to_file">ファイルにエクスポート</string>
   <string name="export_to_file_desc">JSONファイルとして保存</string>

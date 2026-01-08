@@ -712,6 +712,8 @@
   <string name="injection_selector_lorebooks_empty">No lorebooks available</string>
   <string name="setting_display_page_show_line_numbers_title">Show Line Numbers</string>
   <string name="setting_display_page_show_line_numbers_desc">Display line numbers in code blocks</string>
+  <string name="setting_display_page_hide_tts_button_title">Hide TTS Button</string>
+  <string name="setting_display_page_hide_tts_button_desc">Hide the text-to-speech button under assistant messages</string>
   <string name="export_title">Export</string>
   <string name="export_to_file">Export to file</string>
   <string name="export_to_file_desc">Save as JSON file</string>
