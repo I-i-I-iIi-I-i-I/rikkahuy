@@ -7,7 +7,7 @@
   <string name="about_page_version">バージョン</string>
   <string name="about_page_website">ウェブサイト</string>
   <string name="add">追加</string>
-  <string name="app_name">RikkaHub</string>
+  <string name="app_name">RikkaHuy</string>
   <string name="assistant_detail_basic_desc">名前、アバター、モデル、パラメータを設定</string>
   <string name="assistant_detail_injections_desc">モードインジェクションとワールドブックを設定</string>
   <string name="assistant_detail_local_tools_desc">JavaScriptエンジンなどのローカルツールを有効化</string>
@@ -483,7 +483,7 @@
   <string name="setting_page_search_title">検索サービス</string>
   <string name="setting_page_share">共有</string>
   <string name="setting_page_share_desc">このアプリを友達と共有</string>
-  <string name="setting_page_share_text">RikkaHub - オープンソースAndroid AIアシスタント\n\nウェブサイト: https://rikka-ai.com/</string>
+  <string name="setting_page_share_text">RikkaHuy - オープンソースAndroid AIアシスタント\n\nウェブサイト: https://rikka-ai.com/</string>
   <string name="setting_page_theme_setting">テーマ設定</string>
   <string name="setting_page_tts_service">音声サービス</string>
   <string name="setting_page_tts_service_desc">音声合成サービスプロバイダーを設定</string>

@@ -7,7 +7,7 @@
   <string name="about_page_version">版本</string>
   <string name="about_page_website">官網</string>
   <string name="add">添加</string>
-  <string name="app_name">RikkaHub</string>
+  <string name="app_name">RikkaHuy</string>
   <string name="assistant_detail_basic_desc">設定名稱、頭像、模型與參數</string>
   <string name="assistant_detail_injections_desc">設定模式注入與世界書</string>
   <string name="assistant_detail_local_tools_desc">啟用本機工具如 JavaScript 引擎</string>
@@ -483,7 +483,7 @@
   <string name="setting_page_search_title">搜尋服務</string>
   <string name="setting_page_share">分享</string>
   <string name="setting_page_share_desc">分享本APP給朋友</string>
-  <string name="setting_page_share_text">RikkaHub - 開源安卓AI助手\n\n官網: https://rikka-ai.com/</string>
+  <string name="setting_page_share_text">RikkaHuy - 開源安卓AI助手\n\n官網: https://rikka-ai.com/</string>
   <string name="setting_page_theme_setting">主題設定</string>
   <string name="setting_page_tts_service">語音服務</string>
   <string name="setting_page_tts_service_desc">配置語音合成服務提供商</string>
