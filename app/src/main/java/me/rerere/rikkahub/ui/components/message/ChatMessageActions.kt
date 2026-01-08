@@ -1,4 +1,3 @@
-
 package me.rerere.rikkahub.ui.components.message
 
 import androidx.compose.foundation.LocalIndication
@@ -40,10 +39,10 @@ import androidx.compose.ui.unit.dp
 import com.composables.icons.lucide.BookOpenText
 import com.composables.icons.lucide.CircleStop
 import com.composables.icons.lucide.Copy
-import com.composables.icons.lucide.Ellipsis
 import com.composables.icons.lucide.GitFork
 import com.composables.icons.lucide.Languages
 import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.Ellipsis
 import com.composables.icons.lucide.Pencil
 import com.composables.icons.lucide.RefreshCw
 import com.composables.icons.lucide.Share
@@ -118,33 +117,38 @@ fun ColumnScope.ChatMessageActionButtons(
             val settings = LocalSettings.current
             val isSpeaking by tts.isSpeaking.collectAsState()
             val isAvailable by tts.isAvailable.collectAsState()
-            Icon(
-                imageVector = if (isSpeaking) Lucide.CircleStop else Lucide.Volume2,
-                contentDescription = stringResource(R.string.tts),
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .clickable(
-                        enabled = isAvailable,
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = LocalIndication.current,
-                        onClick = {
-                            if (!isSpeaking) {
-                                val text = message.toText()
-                                val textToSpeak = if (settings.displaySetting.ttsOnlyReadQuoted) {
-                                    text.extractQuotedContentAsText() ?: text
+
+            // MERGED: Added your check for hideTtsButton here
+            if (!settings.displaySetting.hideTtsButton) {
+                Icon(
+                    imageVector = if (isSpeaking) Lucide.CircleStop else Lucide.Volume2,
+                    contentDescription = stringResource(R.string.tts),
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .clickable(
+                            enabled = isAvailable,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = LocalIndication.current,
+                            onClick = {
+                                if (!isSpeaking) {
+                                    val text = message.toText()
+                                    // MERGED: Kept server logic for reading quoted content
+                                    val textToSpeak = if (settings.displaySetting.ttsOnlyReadQuoted) {
+                                        text.extractQuotedContentAsText() ?: text
+                                    } else {
+                                        text
+                                    }
+                                    tts.speak(textToSpeak)
                                 } else {
-                                    text
+                                    tts.stop()
                                 }
-                                tts.speak(textToSpeak)
-                            } else {
-                                tts.stop()
                             }
-                        }
-                    )
-                    .padding(8.dp)
-                    .size(16.dp),
-                tint = if (isAvailable) LocalContentColor.current else LocalContentColor.current.copy(alpha = 0.38f)
-            )
+                        )
+                        .padding(8.dp)
+                        .size(16.dp),
+                    tint = if (isAvailable) LocalContentColor.current else LocalContentColor.current.copy(alpha = 0.38f)
+                )
+            }
 
             // Translation button
             if (onTranslate != null) {
