@@ -91,7 +91,7 @@ private fun computeAIIconByName(name: String): String? {
 
     val lowerName = name.lowercase()
     val result = when {
-        PATTERN_OPENAI.containsMatchIn(lowerName) -> "openai.svg"
+        // Специфичные бренды проверяются первыми (до OpenAI, т.к. "gpt" может встретиться в URL/названиях)
         PATTERN_GEMINI.containsMatchIn(lowerName) -> "gemini-color.svg"
         PATTERN_GOOGLE.containsMatchIn(lowerName) -> "google-color.svg"
         PATTERN_CLAUDE.containsMatchIn(lowerName) -> "claude-color.svg"
@@ -135,6 +135,10 @@ private fun computeAIIconByName(name: String): String? {
         PATTERN_RIKKAHUB.containsMatchIn(lowerName) -> "rikkahub.svg"
         PATTERN_FAL.containsMatchIn(lowerName) -> "fal-color.svg"
 
+        // OpenAI проверяется последним среди AI-провайдеров, т.к. паттерн "gpt" слишком широкий
+        PATTERN_OPENAI.containsMatchIn(lowerName) -> "openai.svg"
+
+        // Поисковые провайдеры
         PATTERN_SEARCH_LINKUP.containsMatchIn(lowerName) -> "linkup.png"
         PATTERN_SEARCH_BING.containsMatchIn(lowerName) -> "bing.png"
         PATTERN_SEARCH_TAVILY.containsMatchIn(lowerName) -> "tavily.png"
