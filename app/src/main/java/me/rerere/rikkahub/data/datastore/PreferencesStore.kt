@@ -386,6 +386,7 @@ data class DisplaySetting(
     val codeBlockAutoWrap: Boolean = false,
     val codeBlockAutoCollapse: Boolean = false,
     val showLineNumbers: Boolean = false,
+    val hideTtsButton: Boolean = false,
 )
 
 @Serializable

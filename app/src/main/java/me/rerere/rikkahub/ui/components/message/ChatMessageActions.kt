@@ -57,6 +57,7 @@ import me.rerere.ai.ui.UIMessagePart
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.data.model.MessageNode
 import me.rerere.rikkahub.ui.context.LocalTTSState
+import me.rerere.rikkahub.ui.hooks.rememberUserSettingsState
 import me.rerere.rikkahub.utils.copyMessageToClipboard
 import me.rerere.rikkahub.utils.toLocalString
 import java.util.Locale
@@ -103,30 +104,35 @@ fun ColumnScope.ChatMessageActionButtons(
         )
 
         if (message.role == MessageRole.ASSISTANT) {
-            val tts = LocalTTSState.current
-            val isSpeaking by tts.isSpeaking.collectAsState()
-            val isAvailable by tts.isAvailable.collectAsState()
-            Icon(
-                imageVector = if (isSpeaking) Lucide.CircleStop else Lucide.Volume2,
-                contentDescription = stringResource(R.string.tts),
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .clickable(
-                        enabled = isAvailable,
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = LocalIndication.current,
-                        onClick = {
-                            if (!isSpeaking) {
-                                tts.speak(message.toText())
-                            } else {
-                                tts.stop()
+            val settings by rememberUserSettingsState()
+            val displaySetting = settings.displaySetting
+
+            if (!displaySetting.hideTtsButton) {
+                val tts = LocalTTSState.current
+                val isSpeaking by tts.isSpeaking.collectAsState()
+                val isAvailable by tts.isAvailable.collectAsState()
+                Icon(
+                    imageVector = if (isSpeaking) Lucide.CircleStop else Lucide.Volume2,
+                    contentDescription = stringResource(R.string.tts),
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .clickable(
+                            enabled = isAvailable,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = LocalIndication.current,
+                            onClick = {
+                                if (!isSpeaking) {
+                                    tts.speak(message.toText())
+                                } else {
+                                    tts.stop()
+                                }
                             }
-                        }
-                    )
-                    .padding(8.dp)
-                    .size(16.dp),
-                tint = if (isAvailable) LocalContentColor.current else LocalContentColor.current.copy(alpha = 0.38f)
-            )
+                        )
+                        .padding(8.dp)
+                        .size(16.dp),
+                    tint = if (isAvailable) LocalContentColor.current else LocalContentColor.current.copy(alpha = 0.38f)
+                )
+            }
 
             // Translation button
             if (onTranslate != null) {

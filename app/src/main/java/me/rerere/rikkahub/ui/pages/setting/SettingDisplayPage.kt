@@ -500,6 +500,26 @@ fun SettingDisplayPage(vm: SettingVM = koinViewModel()) {
 
             item {
                 ListItem(
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    headlineContent = {
+                        Text(stringResource(R.string.setting_display_page_hide_tts_button_title))
+                    },
+                    supportingContent = {
+                        Text(stringResource(R.string.setting_display_page_hide_tts_button_desc))
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = displaySetting.hideTtsButton,
+                            onCheckedChange = {
+                                updateDisplaySetting(displaySetting.copy(hideTtsButton = it))
+                            }
+                        )
+                    },
+                )
+            }
+
+            item {
+                ListItem(
                     headlineContent = {
                         Text(stringResource(R.string.setting_display_page_font_size_title))
                     },
