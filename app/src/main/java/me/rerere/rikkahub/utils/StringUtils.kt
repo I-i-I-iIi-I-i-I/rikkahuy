@@ -1,6 +1,7 @@
 package me.rerere.rikkahub.utils
 
 import org.apache.commons.text.StringEscapeUtils
+import java.util.Locale
 import java.net.URLDecoder
 import java.net.URLEncoder
 import kotlin.io.encoding.Base64
@@ -32,7 +33,7 @@ fun String.unescapeHtml(): String {
     return StringEscapeUtils.unescapeHtml4(this)
 }
 
-fun Number.toFixed(digits: Int = 0) = "%.${digits}f".format(this)
+fun Number.toFixed(digits: Int = 0) = "%.${digits}f".format(Locale.US, this)
 
 fun String.applyPlaceholders(
     vararg placeholders: Pair<String, String>,
@@ -88,8 +89,8 @@ fun Int.formatNumber(): String {
     }
 }
 
-fun Float.toFixed(digits: Int = 0) = "%.${digits}f".format(this)
-fun Double.toFixed(digits: Int = 0) = "%.${digits}f".format(this)
+fun Float.toFixed(digits: Int = 0) = "%.${digits}f".format(Locale.US, this)
+fun Double.toFixed(digits: Int = 0) = "%.${digits}f".format(Locale.US, this)
 
 /**
  * 提取字符串中所有引号内的内容
