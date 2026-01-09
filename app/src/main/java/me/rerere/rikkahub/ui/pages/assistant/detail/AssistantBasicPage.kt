@@ -22,6 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -234,12 +237,18 @@ internal fun AssistantBasicContent(
                 }
             ) {
                 if (assistant.temperature != null) {
+                    var localTemp by remember(assistant.temperature) {
+                        mutableFloatStateOf(assistant.temperature)
+                    }
                     Slider(
-                        value = assistant.temperature,
+                        value = localTemp,
                         onValueChange = {
+                            localTemp = it
+                        },
+                        onValueChangeFinished = {
                             onUpdate(
-                                assistant.copy(
-                                    temperature = it.toFixed(2).toFloatOrNull() ?: 0.6f
+                                vm.assistant.value.copy(
+                                    temperature = localTemp.toFixed(2).toFloatOrNull() ?: 0.6f
                                 )
                             )
                         },
@@ -252,8 +261,7 @@ internal fun AssistantBasicContent(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        val currentTemperature = assistant.temperature
-                        val tagType = when (currentTemperature) {
+                        val tagType = when (localTemp) {
                             in 0.0f..0.3f -> TagType.INFO
                             in 0.3f..1.0f -> TagType.SUCCESS
                             in 1.0f..1.5f -> TagType.WARNING
@@ -264,7 +272,7 @@ internal fun AssistantBasicContent(
                             type = TagType.INFO
                         ) {
                             Text(
-                                text = "$currentTemperature"
+                                text = localTemp.toFixed(2)
                             )
                         }
 
@@ -272,7 +280,7 @@ internal fun AssistantBasicContent(
                             type = tagType
                         ) {
                             Text(
-                                text = when (currentTemperature) {
+                                text = when (localTemp) {
                                     in 0.0f..0.3f -> stringResource(R.string.assistant_page_strict)
                                     in 0.3f..1.0f -> stringResource(R.string.assistant_page_balanced)
                                     in 1.0f..1.5f -> stringResource(R.string.assistant_page_creative)
@@ -311,12 +319,18 @@ internal fun AssistantBasicContent(
                 }
             ) {
                 assistant.topP?.let { topP ->
+                    var localTopP by remember(topP) {
+                        mutableFloatStateOf(topP)
+                    }
                     Slider(
-                        value = topP,
+                        value = localTopP,
                         onValueChange = {
+                            localTopP = it
+                        },
+                        onValueChangeFinished = {
                             onUpdate(
-                                assistant.copy(
-                                    topP = it.toFixed(2).toFloatOrNull() ?: 1.0f
+                                vm.assistant.value.copy(
+                                    topP = localTopP.toFixed(2).toFloatOrNull() ?: 1.0f
                                 )
                             )
                         },
@@ -327,7 +341,7 @@ internal fun AssistantBasicContent(
                     Text(
                         text = stringResource(
                             R.string.assistant_page_top_p_value,
-                            topP.toString()
+                            localTopP.toFixed(2)
                         ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.75f),
@@ -346,12 +360,18 @@ internal fun AssistantBasicContent(
                     )
                 }
             ) {
+                var localContextSize by remember(assistant.contextMessageSize) {
+                    mutableFloatStateOf(assistant.contextMessageSize.toFloat())
+                }
                 Slider(
-                    value = assistant.contextMessageSize.toFloat(),
+                    value = localContextSize,
                     onValueChange = {
+                        localContextSize = it
+                    },
+                    onValueChangeFinished = {
                         onUpdate(
-                            assistant.copy(
-                                contextMessageSize = it.roundToInt()
+                            vm.assistant.value.copy(
+                                contextMessageSize = localContextSize.roundToInt()
                             )
                         )
                     },
@@ -361,9 +381,9 @@ internal fun AssistantBasicContent(
                 )
 
                 Text(
-                    text = if (assistant.contextMessageSize > 0) stringResource(
+                    text = if (localContextSize > 0) stringResource(
                         R.string.assistant_page_context_message_count,
-                        assistant.contextMessageSize
+                        localContextSize.roundToInt()
                     ) else stringResource(R.string.assistant_page_context_message_unlimited),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.75f),
