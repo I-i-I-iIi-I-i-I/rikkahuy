@@ -44,6 +44,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.Placeholder
@@ -55,6 +56,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextGeometricTransform
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
@@ -267,6 +269,31 @@ object HeaderStyle {
 }
 
 @Composable
+private fun italicSpanStyle(
+    fontFamily: FontFamily? = null,
+    fontWeight: FontWeight = FontWeight.Normal
+): SpanStyle {
+    val resolver = LocalFontFamilyResolver.current
+    val face = remember(resolver, fontFamily, fontWeight) {
+        resolver.resolve(
+            fontFamily = fontFamily,
+            fontWeight = fontWeight,
+            fontStyle = FontStyle.Italic
+        ).value as? android.graphics.Typeface
+    }
+    return remember(face) {
+        if (face?.isItalic == true) {
+            SpanStyle(fontStyle = FontStyle.Italic)
+        } else {
+            SpanStyle(
+                fontStyle = FontStyle.Italic,
+                textGeometricTransform = TextGeometricTransform(skewX = -0.25f)
+            )
+        }
+    }
+}
+
+@Composable
 private fun MarkdownNode(
     node: ASTNode,
     content: String,
@@ -367,7 +394,11 @@ private fun MarkdownNode(
 
         // 引用块
         MarkdownElementTypes.BLOCK_QUOTE -> {
-            ProvideTextStyle(LocalTextStyle.current.copy(fontStyle = FontStyle.Italic)) {
+            val italicStyle = italicSpanStyle(
+                fontFamily = LocalTextStyle.current.fontFamily,
+                fontWeight = LocalTextStyle.current.fontWeight ?: FontWeight.Normal
+            )
+            ProvideTextStyle(LocalTextStyle.current.merge(italicStyle)) {
                 val borderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                 val bgColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
                 Column(
@@ -409,9 +440,13 @@ private fun MarkdownNode(
                 })
         }
 
-        // 加粗和斜体
+        // 加粗 и 斜体
         MarkdownElementTypes.EMPH -> {
-            ProvideTextStyle(TextStyle(fontStyle = FontStyle.Italic)) {
+            val italicStyle = italicSpanStyle(
+                fontFamily = LocalTextStyle.current.fontFamily,
+                fontWeight = LocalTextStyle.current.fontWeight ?: FontWeight.Normal
+            )
+            ProvideTextStyle(TextStyle().merge(italicStyle)) {
                 node.children.fastForEach { child ->
                     MarkdownNode(
                         node = child, content = content, modifier = modifier, onClickCitation = onClickCitation
@@ -703,6 +738,10 @@ private fun Paragraph(
 
     val textStyle = LocalTextStyle.current
     val density = LocalDensity.current
+    val italicStyle = italicSpanStyle(
+        fontFamily = textStyle.fontFamily,
+        fontWeight = textStyle.fontWeight ?: FontWeight.Normal
+    )
     FlowRow(
         modifier = modifier.then(
             if (node.nextSibling() != null) Modifier.padding(bottom = 4.dp)
@@ -719,6 +758,7 @@ private fun Paragraph(
                         colorScheme = colorScheme,
                         onClickCitation = onClickCitation,
                         style = textStyle,
+                        italicStyle = italicStyle,
                         density = density,
                         trim = trim,
                     )
@@ -798,6 +838,7 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
     colorScheme: ColorScheme,
     density: Density,
     style: TextStyle,
+    italicStyle: SpanStyle,
     onClickCitation: (String) -> Unit = {},
 ) {
     when {
@@ -806,7 +847,7 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
         node.type == GFMTokenTypes.GFM_AUTOLINK -> {
             val link = node.getTextInNode(content)
             withLink(LinkAnnotation.Url(link)) {
-                withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+                withStyle(italicStyle) {
                     append(link)
                 }
             }
@@ -826,7 +867,7 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
         }
 
         node.type == MarkdownElementTypes.EMPH -> {
-            withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+            withStyle(italicStyle) {
                 node.children.trim(MarkdownTokenTypes.EMPH, 1).fastForEach {
                     appendMarkdownNodeContent(
                         node = it,
@@ -835,6 +876,7 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
                         colorScheme = colorScheme,
                         density = density,
                         style = style,
+                        italicStyle = italicStyle,
                         onClickCitation = onClickCitation
                     )
                 }
@@ -851,6 +893,7 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
                         colorScheme = colorScheme,
                         density = density,
                         style = style,
+                        italicStyle = italicStyle,
                         onClickCitation = onClickCitation
                     )
                 }
@@ -867,6 +910,7 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
                         colorScheme = colorScheme,
                         density = density,
                         style = style,
+                        italicStyle = italicStyle,
                         onClickCitation = onClickCitation
                     )
                 }
@@ -932,7 +976,7 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
             val links = node.children.trim(MarkdownTokenTypes.LT, 1).trim(MarkdownTokenTypes.GT, 1)
             links.fastForEach { link ->
                 withLink(LinkAnnotation.Url(link.getTextInNode(content))) {
-                    withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+                    withStyle(italicStyle) {
                         append(link.getTextInNode(content))
                     }
                 }
@@ -984,6 +1028,7 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
                     colorScheme = colorScheme,
                     density = density,
                     style = style,
+                    italicStyle = italicStyle,
                     onClickCitation = onClickCitation
                 )
             }
