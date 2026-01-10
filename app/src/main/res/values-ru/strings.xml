@@ -765,5 +765,11 @@
   <string name="chat_page_compress_not_enough_messages">Недостаточно сообщений для сжатия. Уменьшите количество сохраняемых сообщений или добавьте больше сообщений.</string>
   <string name="setting_display_page_send_on_enter_title">Отправлять по Enter</string>
   <string name="setting_display_page_send_on_enter_desc">Нажмите Enter, чтобы отправить сообщение, а не добавить новую строку</string>
+  <string name="obfuscate">Обфускация</string>
+  <string name="obfuscation_title">Обфускация текста</string>
+  <string name="obfuscation_cyrillic_to_latin">Кириллица в латиницу</string>
+  <string name="obfuscation_invisible_chars">Невидимые символы</string>
+  <string name="obfuscation_homoglyphs">Омоглифы</string>
+  <string name="obfuscation_apply_to_all">Применить ко всем сообщениям</string>
 </resources>
 

@@ -131,3 +131,8 @@ fun String.extractQuotedContentAsText(separator: String = "\n"): String? {
         null
     }
 }
+
+/**
+ * Проверяет, содержит ли строка невидимые символы (Zero Width Space \u200B).
+ */
+fun String.containsInvisibleChars(): Boolean = this.contains("\u200B")

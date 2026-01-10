@@ -22,12 +22,16 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -195,7 +199,9 @@ fun MarkdownBlock(
     content: String,
     modifier: Modifier = Modifier,
     style: TextStyle = LocalTextStyle.current,
-    onClickCitation: (String) -> Unit = {}
+    onClickCitation: (String) -> Unit = {},
+    highlightIndices: List<Int>? = null,
+    highlightKey: Int = 0
 ) {
     var (data, setData) = remember {
         val preprocessed = preProcess(content)
@@ -227,7 +233,11 @@ fun MarkdownBlock(
         ) {
             astTree.children.fastForEach { child ->
                 MarkdownNode(
-                    node = child, content = preprocessed, onClickCitation = onClickCitation
+                    node = child,
+                    content = preprocessed,
+                    onClickCitation = onClickCitation,
+                    highlightIndices = highlightIndices,
+                    highlightKey = highlightKey
                 )
             }
         }
@@ -299,14 +309,21 @@ private fun MarkdownNode(
     content: String,
     modifier: Modifier = Modifier,
     onClickCitation: (String) -> Unit = {},
-    listLevel: Int = 0
+    listLevel: Int = 0,
+    highlightIndices: List<Int>? = null,
+    highlightKey: Int = 0
 ) {
     when (node.type) {
         // 文件根节点
         MarkdownElementTypes.MARKDOWN_FILE -> {
             node.children.fastForEach { child ->
                 MarkdownNode(
-                    node = child, content = content, modifier = modifier, onClickCitation = onClickCitation
+                    node = child,
+                    content = content,
+                    modifier = modifier,
+                    onClickCitation = onClickCitation,
+                    highlightIndices = highlightIndices,
+                    highlightKey = highlightKey
                 )
             }
         }
@@ -314,7 +331,12 @@ private fun MarkdownNode(
         // 段落
         MarkdownElementTypes.PARAGRAPH -> {
             Paragraph(
-                node = node, content = content, modifier = modifier, onClickCitation = onClickCitation
+                node = node,
+                content = content,
+                modifier = modifier,
+                onClickCitation = onClickCitation,
+                highlightIndices = highlightIndices,
+                highlightKey = highlightKey
             )
         }
 
@@ -415,7 +437,11 @@ private fun MarkdownNode(
                         .padding(8.dp)) {
                     node.children.fastForEach { child ->
                         MarkdownNode(
-                            node = child, content = content, onClickCitation = onClickCitation
+                            node = child,
+                            content = content,
+                            onClickCitation = onClickCitation,
+                            highlightIndices = highlightIndices,
+                            highlightKey = highlightKey
                         )
                     }
                 }
@@ -449,7 +475,12 @@ private fun MarkdownNode(
             ProvideTextStyle(TextStyle().merge(italicStyle)) {
                 node.children.fastForEach { child ->
                     MarkdownNode(
-                        node = child, content = content, modifier = modifier, onClickCitation = onClickCitation
+                        node = child,
+                        content = content,
+                        modifier = modifier,
+                        onClickCitation = onClickCitation,
+                        highlightIndices = highlightIndices,
+                        highlightKey = highlightKey
                     )
                 }
             }
@@ -459,7 +490,12 @@ private fun MarkdownNode(
             ProvideTextStyle(TextStyle(fontWeight = FontWeight.SemiBold)) {
                 node.children.fastForEach { child ->
                     MarkdownNode(
-                        node = child, content = content, modifier = modifier, onClickCitation = onClickCitation
+                        node = child,
+                        content = content,
+                        modifier = modifier,
+                        onClickCitation = onClickCitation,
+                        highlightIndices = highlightIndices,
+                        highlightKey = highlightKey
                     )
                 }
             }
@@ -588,7 +624,12 @@ private fun MarkdownNode(
             // 递归处理其他节点的子节点
             node.children.fastForEach { child ->
                 MarkdownNode(
-                    node = child, content = content, modifier = modifier, onClickCitation = onClickCitation
+                    node = child,
+                    content = content,
+                    modifier = modifier,
+                    onClickCitation = onClickCitation,
+                    highlightIndices = highlightIndices,
+                    highlightKey = highlightKey
                 )
             }
         }
@@ -715,7 +756,25 @@ private fun Paragraph(
     trim: Boolean = false,
     onClickCitation: (String) -> Unit = {},
     modifier: Modifier,
+    highlightIndices: List<Int>? = null,
+    highlightKey: Int = 0
 ) {
+    val textStyle = LocalTextStyle.current
+    val contentColor = LocalContentColor.current
+    val targetColor = if (textStyle.color != Color.Unspecified) textStyle.color else contentColor
+    val highlightColor = remember { Animatable(targetColor) }
+
+    LaunchedEffect(highlightKey) {
+        if (highlightIndices != null) {
+            highlightColor.snapTo(Color.Red)
+            kotlinx.coroutines.delay(2000)
+            highlightColor.animateTo(
+                targetValue = targetColor,
+                animationSpec = tween(durationMillis = 1000, easing = LinearEasing)
+            )
+        }
+    }
+
     // dumpAst(node, content)
     if (node.findChildOfTypeRecursive(MarkdownElementTypes.IMAGE, GFMElementTypes.BLOCK_MATH) != null) {
         FlowRow(modifier = modifier) {
@@ -736,7 +795,6 @@ private fun Paragraph(
         node.findChildOfTypeRecursive(GFMElementTypes.INLINE_MATH) != null
     }
 
-    val textStyle = LocalTextStyle.current
     val density = LocalDensity.current
     val italicStyle = italicSpanStyle(
         fontFamily = textStyle.fontFamily,
@@ -748,7 +806,8 @@ private fun Paragraph(
             else Modifier
         )
     ) {
-        val annotatedString = remember(content) {
+        val animatedHighlightColor = highlightColor.value
+        val annotatedString = remember(content, animatedHighlightColor) {
             buildAnnotatedString {
                 node.children.fastForEach { child ->
                     appendMarkdownNodeContent(
@@ -761,6 +820,8 @@ private fun Paragraph(
                         italicStyle = italicStyle,
                         density = density,
                         trim = trim,
+                        highlightIndices = highlightIndices,
+                        highlightColor = animatedHighlightColor
                     )
                 }
             }
@@ -840,6 +901,8 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
     style: TextStyle,
     italicStyle: SpanStyle,
     onClickCitation: (String) -> Unit = {},
+    highlightIndices: List<Int>? = null,
+    highlightColor: Color = Color.Unspecified
 ) {
     when {
         node.type == MarkdownTokenTypes.BLOCK_QUOTE -> {}
@@ -861,9 +924,20 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
                     it
                 }.replace(BREAK_LINE_REGEX, "\n")
             }
-            append(
-                text = text,
-            )
+            if (highlightIndices != null && highlightColor != Color.Unspecified) {
+                text.forEachIndexed { index, char ->
+                    val globalIndex = node.startOffset + index
+                    if (globalIndex in highlightIndices) {
+                        withStyle(SpanStyle(color = highlightColor)) {
+                            append(char)
+                        }
+                    } else {
+                        append(char)
+                    }
+                }
+            } else {
+                append(text = text)
+            }
         }
 
         node.type == MarkdownElementTypes.EMPH -> {
@@ -877,7 +951,9 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
                         density = density,
                         style = style,
                         italicStyle = italicStyle,
-                        onClickCitation = onClickCitation
+                        onClickCitation = onClickCitation,
+                        highlightIndices = highlightIndices,
+                        highlightColor = highlightColor
                     )
                 }
             }
@@ -894,7 +970,9 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
                         density = density,
                         style = style,
                         italicStyle = italicStyle,
-                        onClickCitation = onClickCitation
+                        onClickCitation = onClickCitation,
+                        highlightIndices = highlightIndices,
+                        highlightColor = highlightColor
                     )
                 }
             }
@@ -911,7 +989,9 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
                         density = density,
                         style = style,
                         italicStyle = italicStyle,
-                        onClickCitation = onClickCitation
+                        onClickCitation = onClickCitation,
+                        highlightIndices = highlightIndices,
+                        highlightColor = highlightColor
                     )
                 }
             }
@@ -1029,7 +1109,9 @@ private fun AnnotatedString.Builder.appendMarkdownNodeContent(
                     density = density,
                     style = style,
                     italicStyle = italicStyle,
-                    onClickCitation = onClickCitation
+                    onClickCitation = onClickCitation,
+                    highlightIndices = highlightIndices,
+                    highlightColor = highlightColor
                 )
             }
         }

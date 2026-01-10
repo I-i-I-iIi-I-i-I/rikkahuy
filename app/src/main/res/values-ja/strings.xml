@@ -767,5 +767,11 @@
   <string name="chat_page_compress_not_enough_messages">圧縮するためのメッセージが不足しています。保持するメッセージ数を減らすか、メッセージを追加してください。</string>
   <string name="setting_display_page_send_on_enter_title">Enterキーで送信</string>
   <string name="setting_display_page_send_on_enter_desc">Enterキーでメッセージを送信し、改行しない</string>
+  <string name="obfuscate">難読化</string>
+  <string name="obfuscation_title">テキスト難読化</string>
+  <string name="obfuscation_cyrillic_to_latin">キリル文字をラテン文字に変換</string>
+  <string name="obfuscation_invisible_chars">不可視文字を追加</string>
+  <string name="obfuscation_homoglyphs">同形異義文字を追加</string>
+  <string name="obfuscation_apply_to_all">すべてのメッセージに適用</string>
 </resources>
 
