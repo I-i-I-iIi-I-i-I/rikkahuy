@@ -21,9 +21,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -49,6 +52,20 @@ private val jsonLenient = Json {
 
 @Composable
 fun CustomHeaders(headers: List<CustomHeader>, onUpdate: (List<CustomHeader>) -> Unit) {
+    val currentHeaders by rememberUpdatedState(headers)
+
+    // Local state for all fields - recreated when headers change to sync
+    val localNames = remember(headers) {
+        headers.map { it.name }.toMutableStateList()
+    }
+    val localValues = remember(headers) {
+        headers.map { it.value }.toMutableStateList()
+    }
+
+    val headerNameLabel = stringResource(R.string.assistant_page_header_name)
+    val headerValueLabel = stringResource(R.string.assistant_page_header_value)
+    val deleteHeaderContentDescription = stringResource(R.string.assistant_page_delete_header)
+
     Column(
         modifier = Modifier.padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -57,9 +74,6 @@ fun CustomHeaders(headers: List<CustomHeader>, onUpdate: (List<CustomHeader>) ->
         Spacer(Modifier.height(8.dp))
 
         headers.forEachIndexed { index, header ->
-            var headerName by remember(header.name) { mutableStateOf(header.name) }
-            var headerValue by remember(header.value) { mutableStateOf(header.value) }
-
             Card(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -72,38 +86,57 @@ fun CustomHeaders(headers: List<CustomHeader>, onUpdate: (List<CustomHeader>) ->
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         OutlinedTextField(
-                            value = headerName,
-                            onValueChange = {
-                                headerName = it
-                                val updatedHeaders = headers.toMutableList()
-                                updatedHeaders[index] = updatedHeaders[index].copy(name = it.trim())
-                                onUpdate(updatedHeaders)
-                            },
-                            label = { Text(stringResource(R.string.assistant_page_header_name)) },
-                            modifier = Modifier.fillMaxWidth()
+                            value = if (index < localNames.size) localNames[index] else header.name,
+                            onValueChange = { if (index < localNames.size) localNames[index] = it },
+                            label = { Text(headerNameLabel) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    if (!focusState.isFocused) {
+                                        val localName = if (index < localNames.size) localNames[index] else header.name
+                                        if (localName.trim() != header.name && index < currentHeaders.size) {
+                                            val updatedHeaders = currentHeaders.toMutableList()
+                                            updatedHeaders[index] = updatedHeaders[index].copy(name = localName.trim())
+                                            onUpdate(updatedHeaders)
+                                        }
+                                    }
+                                }
                         )
                         Spacer(Modifier.height(8.dp))
                         OutlinedTextField(
-                            value = headerValue,
-                            onValueChange = {
-                                headerValue = it
-                                val updatedHeaders = headers.toMutableList()
-                                updatedHeaders[index] =
-                                    updatedHeaders[index].copy(value = it.trim())
-                                onUpdate(updatedHeaders)
-                            },
-                            label = { Text(stringResource(R.string.assistant_page_header_value)) },
-                            modifier = Modifier.fillMaxWidth()
+                            value = if (index < localValues.size) localValues[index] else header.value,
+                            onValueChange = { if (index < localValues.size) localValues[index] = it },
+                            label = { Text(headerValueLabel) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    if (!focusState.isFocused) {
+                                        val localValue = if (index < localValues.size) localValues[index] else header.value
+                                        if (localValue.trim() != header.value && index < currentHeaders.size) {
+                                            val updatedHeaders = currentHeaders.toMutableList()
+                                            updatedHeaders[index] = updatedHeaders[index].copy(value = localValue.trim())
+                                            onUpdate(updatedHeaders)
+                                        }
+                                    }
+                                }
                         )
                     }
                     IconButton(onClick = {
-                        val updatedHeaders = headers.toMutableList()
-                        updatedHeaders.removeAt(index)
-                        onUpdate(updatedHeaders)
+                        // Save ALL local changes before deleting
+                        val updatedHeaders = currentHeaders.mapIndexed { i, h ->
+                            h.copy(
+                                name = (if (i < localNames.size) localNames[i] else h.name).trim(),
+                                value = (if (i < localValues.size) localValues[i] else h.value).trim()
+                            )
+                        }.toMutableList()
+                        if (index < updatedHeaders.size) {
+                            updatedHeaders.removeAt(index)
+                            onUpdate(updatedHeaders)
+                        }
                     }) {
                         Icon(
                             Lucide.Trash,
-                            contentDescription = stringResource(R.string.assistant_page_delete_header)
+                            contentDescription = deleteHeaderContentDescription
                         )
                     }
                 }
@@ -112,7 +145,13 @@ fun CustomHeaders(headers: List<CustomHeader>, onUpdate: (List<CustomHeader>) ->
 
         Button(
             onClick = {
-                val updatedHeaders = headers.toMutableList()
+                // Sync ALL local changes before adding new one
+                val updatedHeaders = currentHeaders.mapIndexed { i, h ->
+                    h.copy(
+                        name = (if (i < localNames.size) localNames[i] else h.name).trim(),
+                        value = (if (i < localValues.size) localValues[i] else h.value).trim()
+                    )
+                }.toMutableList()
                 updatedHeaders.add(CustomHeader("", ""))
                 onUpdate(updatedHeaders)
             },
@@ -128,6 +167,26 @@ fun CustomHeaders(headers: List<CustomHeader>, onUpdate: (List<CustomHeader>) ->
 @Composable
 fun CustomBodies(customBodies: List<CustomBody>, onUpdate: (List<CustomBody>) -> Unit) {
     val context = LocalContext.current
+    val currentBodies by rememberUpdatedState(customBodies)
+
+    // Local state for all fields - recreated when customBodies change to sync
+    val localKeys = remember(customBodies) {
+        customBodies.map { it.key }.toMutableStateList()
+    }
+    val localValueStrings = remember(customBodies) {
+        customBodies.map { jsonLenient.encodeToString(JsonElement.serializer(), it.value) }.toMutableStateList()
+    }
+    val localValidJsonValues = remember(customBodies) {
+        customBodies.map { it.value }.toMutableStateList()
+    }
+    val localJsonErrors = remember(customBodies) {
+        customBodies.map { null as String? }.toMutableStateList()
+    }
+
+    val bodyKeyLabel = stringResource(R.string.assistant_page_body_key)
+    val bodyValueLabel = stringResource(R.string.assistant_page_body_value)
+    val deleteBodyContentDescription = stringResource(R.string.assistant_page_delete_body)
+
     Column(
         modifier = Modifier.padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -136,12 +195,6 @@ fun CustomBodies(customBodies: List<CustomBody>, onUpdate: (List<CustomBody>) ->
         Spacer(Modifier.height(8.dp))
 
         customBodies.forEachIndexed { index, body ->
-            var bodyKey by remember(body.key) { mutableStateOf(body.key) }
-            var bodyValueString by remember(body.value) {
-                mutableStateOf(jsonLenient.encodeToString(JsonElement.serializer(), body.value))
-            }
-            var jsonParseError by remember { mutableStateOf<String?>(null) }
-
             Card(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -154,42 +207,61 @@ fun CustomBodies(customBodies: List<CustomBody>, onUpdate: (List<CustomBody>) ->
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         OutlinedTextField(
-                            value = bodyKey,
-                            onValueChange = {
-                                bodyKey = it
-                                val updatedBodies = customBodies.toMutableList()
-                                updatedBodies[index] = updatedBodies[index].copy(key = it.trim())
-                                onUpdate(updatedBodies)
-                            },
-                            label = { Text(stringResource(R.string.assistant_page_body_key)) },
-                            modifier = Modifier.fillMaxWidth()
+                            value = if (index < localKeys.size) localKeys[index] else body.key,
+                            onValueChange = { if (index < localKeys.size) localKeys[index] = it },
+                            label = { Text(bodyKeyLabel) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    if (!focusState.isFocused) {
+                                        val localKey = if (index < localKeys.size) localKeys[index] else body.key
+                                        if (localKey.trim() != body.key && index < currentBodies.size) {
+                                            val updatedBodies = currentBodies.toMutableList()
+                                            updatedBodies[index] = updatedBodies[index].copy(key = localKey.trim())
+                                            onUpdate(updatedBodies)
+                                        }
+                                    }
+                                }
                         )
                         Spacer(Modifier.height(8.dp))
                         OutlinedTextField(
-                            value = bodyValueString,
-                            onValueChange = { newString ->
-                                bodyValueString = newString
-                                try {
-                                    val newJsonValue = jsonLenient.parseToJsonElement(newString)
-                                    val updatedBodies = customBodies.toMutableList()
-                                    updatedBodies[index] =
-                                        updatedBodies[index].copy(value = newJsonValue)
-                                    onUpdate(updatedBodies)
-                                    jsonParseError = null // Clear error on successful parse
-                                } catch (e: Exception) { // Catching general Exception, JsonException is common here
-                                    jsonParseError =
-                                        context.getString(
-                                            R.string.assistant_page_invalid_json,
-                                            e.message?.take(100) ?: ""
-                                        ) // Truncate for very long messages
+                            value = if (index < localValueStrings.size) localValueStrings[index] else "",
+                            onValueChange = { newString: String ->
+                                if (index < localValueStrings.size) {
+                                    localValueStrings[index] = newString
+                                    try {
+                                        val newJsonValue = jsonLenient.parseToJsonElement(newString)
+                                        if (index < localValidJsonValues.size) localValidJsonValues[index] = newJsonValue
+                                        if (index < localJsonErrors.size) localJsonErrors[index] = null
+                                    } catch (e: Exception) {
+                                        if (index < localJsonErrors.size) {
+                                            localJsonErrors[index] = context.getString(
+                                                R.string.assistant_page_invalid_json,
+                                                e.message?.take(100) ?: ""
+                                            )
+                                        }
+                                    }
                                 }
                             },
-                            label = { Text(stringResource(R.string.assistant_page_body_value)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            isError = jsonParseError != null,
+                            label = { Text(bodyValueLabel) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    if (!focusState.isFocused) {
+                                        val jsonError = if (index < localJsonErrors.size) localJsonErrors[index] else null
+                                        val localValidJson = if (index < localValidJsonValues.size) localValidJsonValues[index] else body.value
+                                        if (jsonError == null && localValidJson != body.value && index < currentBodies.size) {
+                                            val updatedBodies = currentBodies.toMutableList()
+                                            updatedBodies[index] = updatedBodies[index].copy(value = localValidJson)
+                                            onUpdate(updatedBodies)
+                                        }
+                                    }
+                                },
+                            isError = (if (index < localJsonErrors.size) localJsonErrors[index] else null) != null,
                             supportingText = {
-                                if (jsonParseError != null) {
-                                    Text(jsonParseError!!)
+                                val error = if (index < localJsonErrors.size) localJsonErrors[index] else null
+                                if (error != null) {
+                                    Text(error)
                                 }
                             },
                             minLines = 3,
@@ -203,13 +275,22 @@ fun CustomBodies(customBodies: List<CustomBody>, onUpdate: (List<CustomBody>) ->
                         )
                     }
                     IconButton(onClick = {
-                        val updatedBodies = customBodies.toMutableList()
-                        updatedBodies.removeAt(index)
-                        onUpdate(updatedBodies)
+                        // Save ALL local changes before deleting
+                        val updatedBodies = currentBodies.mapIndexed { i, b ->
+                            val jsonError = if (i < localJsonErrors.size) localJsonErrors[i] else null
+                            b.copy(
+                                key = (if (i < localKeys.size) localKeys[i] else b.key).trim(),
+                                value = if (jsonError == null && i < localValidJsonValues.size) localValidJsonValues[i] else b.value
+                            )
+                        }.toMutableList()
+                        if (index < updatedBodies.size) {
+                            updatedBodies.removeAt(index)
+                            onUpdate(updatedBodies)
+                        }
                     }) {
                         Icon(
                             Lucide.Trash,
-                            contentDescription = stringResource(R.string.assistant_page_delete_body)
+                            contentDescription = deleteBodyContentDescription
                         )
                     }
                 }
@@ -218,7 +299,14 @@ fun CustomBodies(customBodies: List<CustomBody>, onUpdate: (List<CustomBody>) ->
 
         Button(
             onClick = {
-                val updatedBodies = customBodies.toMutableList()
+                // Sync ALL local changes before adding new one
+                val updatedBodies = currentBodies.mapIndexed { i, b ->
+                    val jsonError = if (i < localJsonErrors.size) localJsonErrors[i] else null
+                    b.copy(
+                        key = (if (i < localKeys.size) localKeys[i] else b.key).trim(),
+                        value = if (jsonError == null && i < localValidJsonValues.size) localValidJsonValues[i] else b.value
+                    )
+                }.toMutableList()
                 updatedBodies.add(CustomBody("", JsonPrimitive("")))
                 onUpdate(updatedBodies)
             },
