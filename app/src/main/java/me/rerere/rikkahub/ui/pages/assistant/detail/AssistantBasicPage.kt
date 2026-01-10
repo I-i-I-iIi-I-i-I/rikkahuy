@@ -23,10 +23,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
@@ -134,16 +136,17 @@ internal fun AssistantBasicContent(
                 },
                 modifier = Modifier.padding(8.dp),
             ) {
+                var localName by remember(assistant.name) { mutableStateOf<String>(assistant.name) }
                 OutlinedTextField(
-                    value = assistant.name,
-                    onValueChange = {
-                        onUpdate(
-                            assistant.copy(
-                                name = it
-                            )
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                    value = localName,
+                    onValueChange = { localName = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            if (!focusState.isFocused && localName != assistant.name) {
+                                onUpdate(assistant.copy(name = localName))
+                            }
+                        }
                 )
             }
 
@@ -439,21 +442,26 @@ internal fun AssistantBasicContent(
                     Text(stringResource(R.string.assistant_page_max_tokens_desc))
                 }
             ) {
+                var localMaxTokens by remember(assistant.maxTokens) {
+                    mutableStateOf<String>(assistant.maxTokens?.toString() ?: "")
+                }
                 OutlinedTextField(
-                    value = assistant.maxTokens?.toString() ?: "",
-                    onValueChange = { text ->
-                        val tokens = if (text.isBlank()) {
-                            null
-                        } else {
-                            text.toIntOrNull()?.takeIf { it > 0 }
-                        }
-                        onUpdate(
-                            assistant.copy(
-                                maxTokens = tokens
-                            )
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
+                    value = localMaxTokens,
+                    onValueChange = { localMaxTokens = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            if (!focusState.isFocused) {
+                                val tokens = if (localMaxTokens.isBlank()) {
+                                    null
+                                } else {
+                                    localMaxTokens.toIntOrNull()?.takeIf { it > 0 }
+                                }
+                                if (tokens != assistant.maxTokens) {
+                                    onUpdate(assistant.copy(maxTokens = tokens))
+                                }
+                            }
+                        },
                     placeholder = {
                         Text(stringResource(R.string.assistant_page_max_tokens_no_limit))
                     },

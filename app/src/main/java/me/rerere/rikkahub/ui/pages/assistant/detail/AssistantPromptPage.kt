@@ -34,13 +34,17 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -132,6 +136,20 @@ private fun AssistantPromptContent(
     val context = LocalContext.current
     val templateTransformer = koinInject<TemplateTransformer>()
 
+    // Capture the latest assistant for use in callbacks to prevent stale state issues
+    val currentAssistant by rememberUpdatedState(assistant)
+
+    // Hoisted state for lists to prevent data loss during reordering/adding
+    val localPresetTexts = remember(assistant.presetMessages) {
+        assistant.presetMessages.map { it.toText() }.toMutableStateList()
+    }
+    val localQuickTitles = remember(assistant.quickMessages) {
+        assistant.quickMessages.map { it.title }.toMutableStateList()
+    }
+    val localQuickContents = remember(assistant.quickMessages) {
+        assistant.quickMessages.map { it.content }.toMutableStateList()
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -152,21 +170,16 @@ private fun AssistantPromptContent(
                 val systemPromptValue = rememberTextFieldState(
                     initialText = assistant.systemPrompt,
                 )
-                LaunchedEffect(Unit) {
-                    snapshotFlow { systemPromptValue.text }.collect {
-                        onUpdate(
-                            assistant.copy(
-                                systemPrompt = it.toString()
-                            )
-                        )
-                    }
-                }
-
                 TextArea(
                     state = systemPromptValue,
                     label = stringResource(R.string.assistant_page_system_prompt),
                     minLines = 5,
-                    maxLines = 10
+                    maxLines = 10,
+                    modifier = Modifier.onFocusChanged { focusState ->
+                        if (!focusState.isFocused && systemPromptValue.text.toString() != assistant.systemPrompt) {
+                            onUpdate(assistant.copy(systemPrompt = systemPromptValue.text.toString()))
+                        }
+                    }
                 )
 
                 Column {
@@ -204,16 +217,19 @@ private fun AssistantPromptContent(
                     Text(stringResource(R.string.assistant_page_message_template))
                 },
                 content = {
+                    var localTemplate by remember(assistant.messageTemplate) {
+                        mutableStateOf(assistant.messageTemplate)
+                    }
                     OutlinedTextField(
-                        value = assistant.messageTemplate,
-                        onValueChange = {
-                            onUpdate(
-                                assistant.copy(
-                                    messageTemplate = it
-                                )
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
+                        value = localTemplate,
+                        onValueChange = { localTemplate = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && localTemplate != assistant.messageTemplate) {
+                                    onUpdate(assistant.copy(messageTemplate = localTemplate))
+                                }
+                            },
                         minLines = 5,
                         maxLines = 15,
                         textStyle = LocalTextStyle.current.copy(
@@ -331,84 +347,112 @@ private fun AssistantPromptContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.padding(16.dp)
             ) {
-                assistant.presetMessages.fastForEachIndexed { index, presetMessage ->
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                assistant.presetMessages.forEachIndexed { index, presetMessage ->
+                    key(index) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Select(
-                                options = listOf(MessageRole.USER, MessageRole.ASSISTANT),
-                                selectedOption = presetMessage.role,
-                                onOptionSelected = { role ->
-                                    onUpdate(
-                                        assistant.copy(
-                                            presetMessages = assistant.presetMessages.mapIndexed { i, msg ->
-                                                if (i == index) {
-                                                    msg.copy(role = role)
-                                                } else {
-                                                    msg
-                                                }
-                                            }
-                                        )
-                                    )
-                                },
-                                modifier = Modifier.width(160.dp)
-                            )
-                            Spacer(modifier = Modifier.weight(1f))
-                            IconButton(
-                                onClick = {
-                                    onUpdate(
-                                        assistant.copy(
-                                            presetMessages = assistant.presetMessages.filterIndexed { i, _ ->
-                                                i != index
-                                            }
-                                        )
-                                    )
-                                }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Icon(Lucide.X, null)
+                                Select(
+                                    options = listOf(MessageRole.USER, MessageRole.ASSISTANT),
+                                    selectedOption = presetMessage.role,
+                                    onOptionSelected = { role ->
+                                        val latest = currentAssistant
+                                        if (index < latest.presetMessages.size) {
+                                            onUpdate(
+                                                latest.copy(
+                                                    presetMessages = latest.presetMessages.mapIndexed { i, msg ->
+                                                        if (i == index) {
+                                                            msg.copy(
+                                                                role = role,
+                                                                parts = listOf(UIMessagePart.Text(if (i < localPresetTexts.size) localPresetTexts[i] else msg.toText()))
+                                                            )
+                                                        } else {
+                                                            msg.copy(
+                                                                parts = listOf(UIMessagePart.Text(if (i < localPresetTexts.size) localPresetTexts[i] else msg.toText()))
+                                                            )
+                                                        }
+                                                    }
+                                                )
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.width(160.dp)
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                IconButton(
+                                    onClick = {
+                                        val latest = currentAssistant
+                                        // Sync all before deleting
+                                        val updatedMessages = latest.presetMessages.mapIndexed { i, msg ->
+                                            msg.copy(parts = listOf(UIMessagePart.Text(if (i < localPresetTexts.size) localPresetTexts[i] else msg.toText())))
+                                        }.toMutableList()
+
+                                        if (index < updatedMessages.size) {
+                                            updatedMessages.removeAt(index)
+                                            onUpdate(latest.copy(presetMessages = updatedMessages))
+                                        }
+                                    }
+                                ) {
+                                    Icon(Lucide.X, null)
+                                }
                             }
-                        }
-                        OutlinedTextField(
-                            value = presetMessage.toText(),
-                            onValueChange = { text ->
-                                onUpdate(
-                                    assistant.copy(
-                                        presetMessages = assistant.presetMessages.mapIndexed { i, msg ->
-                                            if (i == index) {
-                                                msg.copy(parts = listOf(UIMessagePart.Text(text)))
-                                            } else {
-                                                msg
+
+                            val localText = if (index < localPresetTexts.size) localPresetTexts[index] else presetMessage.toText()
+                            OutlinedTextField(
+                                value = localText,
+                                onValueChange = { if (index < localPresetTexts.size) localPresetTexts[index] = it },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onFocusChanged { focusState ->
+                                        if (!focusState.isFocused) {
+                                            val latest = currentAssistant
+                                            val currentLocalText = if (index < localPresetTexts.size) localPresetTexts[index] else presetMessage.toText()
+                                            if (index < latest.presetMessages.size && currentLocalText != latest.presetMessages[index].toText()) {
+                                                onUpdate(
+                                                    latest.copy(
+                                                        presetMessages = latest.presetMessages.mapIndexed { i, msg ->
+                                                            if (i == index) {
+                                                                msg.copy(parts = listOf(UIMessagePart.Text(currentLocalText)))
+                                                            } else {
+                                                                msg
+                                                            }
+                                                        }
+                                                    )
+                                                )
                                             }
                                         }
-                                    )
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 6
-                        )
+                                    },
+                                maxLines = 6
+                            )
+                        }
                     }
                 }
                 Button(
                     onClick = {
-                        val lastRole = assistant.presetMessages.lastOrNull()?.role ?: MessageRole.ASSISTANT
+                        val latest = currentAssistant
+                        val lastRole = latest.presetMessages.lastOrNull()?.role ?: MessageRole.ASSISTANT
                         val nextRole = when (lastRole) {
                             MessageRole.USER -> MessageRole.ASSISTANT
                             MessageRole.ASSISTANT -> MessageRole.USER
                             else -> MessageRole.USER
                         }
-                        onUpdate(
-                            assistant.copy(
-                                presetMessages = assistant.presetMessages + UIMessage(
-                                    role = nextRole,
-                                    parts = listOf(UIMessagePart.Text(""))
-                                )
-                            )
-                        )
+
+                        // Sync all current fields before adding new one
+                        val updatedMessages = latest.presetMessages.mapIndexed { i, msg ->
+                            msg.copy(parts = listOf(UIMessagePart.Text(if (i < localPresetTexts.size) localPresetTexts[i] else msg.toText())))
+                        }.toMutableList()
+
+                        updatedMessages.add(UIMessage(
+                            role = nextRole,
+                            parts = listOf(UIMessagePart.Text(""))
+                        ))
+
+                        onUpdate(latest.copy(presetMessages = updatedMessages))
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -435,75 +479,107 @@ private fun AssistantPromptContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.padding(16.dp)
             ) {
-                assistant.quickMessages.fastForEachIndexed { index, quickMessage ->
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                assistant.quickMessages.forEachIndexed { index, quickMessage ->
+                    key(index) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            OutlinedTextField(
-                                value = quickMessage.title,
-                                onValueChange = { title ->
-                                    onUpdate(
-                                        assistant.copy(
-                                            quickMessages = assistant.quickMessages.mapIndexed { i, msg ->
-                                                if (i == index) {
-                                                    msg.copy(title = title)
-                                                } else {
-                                                    msg
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                val localTitle = if (index < localQuickTitles.size) localQuickTitles[index] else quickMessage.title
+                                OutlinedTextField(
+                                    value = localTitle,
+                                    onValueChange = { if (index < localQuickTitles.size) localQuickTitles[index] = it },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .onFocusChanged { focusState ->
+                                            if (!focusState.isFocused) {
+                                                val latest = currentAssistant
+                                                val currentLocalTitle = if (index < localQuickTitles.size) localQuickTitles[index] else quickMessage.title
+                                                if (index < latest.quickMessages.size && currentLocalTitle != latest.quickMessages[index].title) {
+                                                    onUpdate(
+                                                        latest.copy(
+                                                            quickMessages = latest.quickMessages.mapIndexed { i, msg ->
+                                                                if (i == index) {
+                                                                    msg.copy(title = currentLocalTitle)
+                                                                } else {
+                                                                    msg
+                                                                }
+                                                            }
+                                                        )
+                                                    )
                                                 }
                                             }
-                                        )
-                                    )
-                                },
-                                modifier = Modifier.weight(1f),
-                                label = { Text(stringResource(R.string.assistant_page_quick_message_title)) }
-                            )
-                            IconButton(
-                                onClick = {
-                                    onUpdate(
-                                        assistant.copy(
-                                            quickMessages = assistant.quickMessages.filterIndexed { i, _ ->
-                                                i != index
-                                            }
-                                        )
-                                    )
+                                        },
+                                    label = { Text(stringResource(R.string.assistant_page_quick_message_title)) }
+                                )
+                                IconButton(
+                                    onClick = {
+                                        val latest = currentAssistant
+                                        // Sync all before deleting
+                                        val updatedMessages = latest.quickMessages.mapIndexed { i, msg ->
+                                            msg.copy(
+                                                title = if (i < localQuickTitles.size) localQuickTitles[i] else msg.title,
+                                                content = if (i < localQuickContents.size) localQuickContents[i] else msg.content
+                                            )
+                                        }.toMutableList()
+
+                                        if (index < updatedMessages.size) {
+                                            updatedMessages.removeAt(index)
+                                            onUpdate(latest.copy(quickMessages = updatedMessages))
+                                        }
+                                    }
+                                ) {
+                                    Icon(Lucide.X, null)
                                 }
-                            ) {
-                                Icon(Lucide.X, null)
                             }
-                        }
-                        OutlinedTextField(
-                            value = quickMessage.content,
-                            onValueChange = { text ->
-                                onUpdate(
-                                    assistant.copy(
-                                        quickMessages = assistant.quickMessages.mapIndexed { i, msg ->
-                                            if (i == index) {
-                                                msg.copy(content = text)
-                                            } else {
-                                                msg
+                            val localContent = if (index < localQuickContents.size) localQuickContents[index] else quickMessage.content
+                            OutlinedTextField(
+                                value = localContent,
+                                onValueChange = { if (index < localQuickContents.size) localQuickContents[index] = it },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onFocusChanged { focusState ->
+                                        if (!focusState.isFocused) {
+                                            val latest = currentAssistant
+                                            val currentLocalContent = if (index < localQuickContents.size) localQuickContents[index] else quickMessage.content
+                                            if (index < latest.quickMessages.size && currentLocalContent != latest.quickMessages[index].content) {
+                                                onUpdate(
+                                                    latest.copy(
+                                                        quickMessages = latest.quickMessages.mapIndexed { i, msg ->
+                                                            if (i == index) {
+                                                                msg.copy(content = currentLocalContent)
+                                                            } else {
+                                                                msg
+                                                            }
+                                                        }
+                                                    )
+                                                )
                                             }
                                         }
-                                    )
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 6,
-                            label = { Text(stringResource(R.string.assistant_page_quick_message_content)) }
-                        )
+                                    },
+                                maxLines = 6,
+                                label = { Text(stringResource(R.string.assistant_page_quick_message_content)) }
+                            )
+                        }
                     }
                 }
                 Button(
                     onClick = {
-                        onUpdate(
-                            assistant.copy(
-                                quickMessages = assistant.quickMessages + QuickMessage()
+                        val latest = currentAssistant
+                        // Sync all current fields before adding new one
+                        val updatedMessages = latest.quickMessages.mapIndexed { i, msg ->
+                            msg.copy(
+                                title = if (i < localQuickTitles.size) localQuickTitles[i] else msg.title,
+                                content = if (i < localQuickContents.size) localQuickContents[i] else msg.content
                             )
-                        )
+                        }.toMutableList()
+
+                        updatedMessages.add(QuickMessage())
+                        onUpdate(latest.copy(quickMessages = updatedMessages))
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -530,13 +606,15 @@ private fun AssistantPromptContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.padding(horizontal = 8.dp)
             ) {
-                assistant.regexes.fastForEachIndexed { index, regex ->
-                    AssistantRegexCard(
-                        regex = regex,
-                        onUpdate = onUpdate,
-                        assistant = assistant,
-                        index = index
-                    )
+                assistant.regexes.forEachIndexed { index, regex ->
+                    key(regex.id) {
+                        AssistantRegexCard(
+                            regex = regex,
+                            onUpdate = onUpdate,
+                            assistant = assistant,
+                            index = index
+                        )
+                    }
                 }
                 Button(
                     onClick = {
@@ -564,6 +642,12 @@ private fun AssistantRegexCard(
     assistant: Assistant,
     index: Int
 ) {
+    // Capture the latest assistant for use in callbacks
+    val currentAssistant by rememberUpdatedState(assistant)
+
+    // Flag to prevent onFocusChanged from saving during deletion
+    var isDeleting by remember { mutableStateOf(false) }
+
     var expanded by remember {
         mutableStateOf(false)
     }
@@ -590,17 +674,20 @@ private fun AssistantRegexCard(
                 Switch(
                     checked = regex.enabled,
                     onCheckedChange = { enabled ->
-                        onUpdate(
-                            assistant.copy(
-                                regexes = assistant.regexes.mapIndexed { i, reg ->
-                                    if (i == index) {
-                                        reg.copy(enabled = enabled)
-                                    } else {
-                                        reg
+                        val latest = currentAssistant
+                        if (index < latest.regexes.size) {
+                            onUpdate(
+                                latest.copy(
+                                    regexes = latest.regexes.mapIndexed { i, reg ->
+                                        if (i == index) {
+                                            reg.copy(enabled = enabled)
+                                        } else {
+                                            reg
+                                        }
                                     }
-                                }
+                                )
                             )
-                        )
+                        }
                     },
                     modifier = Modifier.padding(start = 8.dp)
                 )
@@ -618,61 +705,88 @@ private fun AssistantRegexCard(
 
             if (expanded) {
 
+                var localName by remember(regex.name) { mutableStateOf(regex.name) }
                 OutlinedTextField(
-                    value = regex.name,
-                    onValueChange = { name ->
-                        onUpdate(
-                            assistant.copy(
-                                regexes = assistant.regexes.mapIndexed { i, reg ->
-                                    if (i == index) {
-                                        reg.copy(name = name)
-                                    } else {
-                                        reg
-                                    }
+                    value = localName,
+                    onValueChange = { localName = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && !isDeleting && localName != regex.name) {
+                                    val latest = currentAssistant
+                                    // Only save if the item still exists
+                                    if (index < latest.regexes.size && latest.regexes[index].id == regex.id) {
+                                    onUpdate(
+                                        latest.copy(
+                                            regexes = latest.regexes.mapIndexed { i, reg ->
+                                                if (i == index) {
+                                                    reg.copy(name = localName)
+                                                } else {
+                                                    reg
+                                                }
+                                            }
+                                        )
+                                    )
                                 }
-                            )
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
+                            }
+                        },
                     label = { Text(stringResource(R.string.assistant_page_regex_name)) }
                 )
 
+                var localFind by remember(regex.findRegex) { mutableStateOf(regex.findRegex) }
                 OutlinedTextField(
-                    value = regex.findRegex,
-                    onValueChange = { findRegex ->
-                        onUpdate(
-                            assistant.copy(
-                                regexes = assistant.regexes.mapIndexed { i, reg ->
-                                    if (i == index) {
-                                        reg.copy(findRegex = findRegex.trim())
-                                    } else {
-                                        reg
-                                    }
+                    value = localFind,
+                    onValueChange = { localFind = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && !isDeleting && localFind != regex.findRegex) {
+                                    val latest = currentAssistant
+                                    // Only save if the item still exists
+                                    if (index < latest.regexes.size && latest.regexes[index].id == regex.id) {
+                                    onUpdate(
+                                        latest.copy(
+                                            regexes = latest.regexes.mapIndexed { i, reg ->
+                                                if (i == index) {
+                                                    reg.copy(findRegex = localFind.trim())
+                                                } else {
+                                                    reg
+                                                }
+                                            }
+                                        )
+                                    )
                                 }
-                            )
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
+                            }
+                        },
                     label = { Text(stringResource(R.string.assistant_page_regex_find_regex)) },
                     placeholder = { Text("e.g., \\b\\w+@\\w+\\.\\w+\\b") },
                 )
 
+                var localReplace by remember(regex.replaceString) { mutableStateOf(regex.replaceString) }
                 OutlinedTextField(
-                    value = regex.replaceString,
-                    onValueChange = { replaceString ->
-                        onUpdate(
-                            assistant.copy(
-                                regexes = assistant.regexes.mapIndexed { i, reg ->
-                                    if (i == index) {
-                                        reg.copy(replaceString = replaceString)
-                                    } else {
-                                        reg
-                                    }
+                    value = localReplace,
+                    onValueChange = { localReplace = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                                if (!focusState.isFocused && !isDeleting && localReplace != regex.replaceString) {
+                                    val latest = currentAssistant
+                                    // Only save if the item still exists
+                                    if (index < latest.regexes.size && latest.regexes[index].id == regex.id) {
+                                    onUpdate(
+                                        latest.copy(
+                                            regexes = latest.regexes.mapIndexed { i, reg ->
+                                                if (i == index) {
+                                                    reg.copy(replaceString = localReplace)
+                                                } else {
+                                                    reg
+                                                }
+                                            }
+                                        )
+                                    )
                                 }
-                            )
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
+                            }
+                        },
                     label = { Text(stringResource(R.string.assistant_page_regex_replace_string)) },
                     placeholder = { Text("e.g., [EMAIL]") }
                 )
@@ -693,22 +807,25 @@ private fun AssistantRegexCard(
                                 Checkbox(
                                     checked = scope in regex.affectingScope,
                                     onCheckedChange = { checked ->
-                                        val newScopes = if (checked) {
-                                            regex.affectingScope + scope
-                                        } else {
-                                            regex.affectingScope - scope
-                                        }
-                                        onUpdate(
-                                            assistant.copy(
-                                                regexes = assistant.regexes.mapIndexed { i, reg ->
-                                                    if (i == index) {
-                                                        reg.copy(affectingScope = newScopes)
-                                                    } else {
-                                                        reg
+                                        val latest = currentAssistant
+                                        if (index < latest.regexes.size) {
+                                            val newScopes = if (checked) {
+                                                regex.affectingScope + scope
+                                            } else {
+                                                regex.affectingScope - scope
+                                            }
+                                            onUpdate(
+                                                latest.copy(
+                                                    regexes = latest.regexes.mapIndexed { i, reg ->
+                                                        if (i == index) {
+                                                            reg.copy(affectingScope = newScopes)
+                                                        } else {
+                                                            reg
+                                                        }
                                                     }
-                                                }
+                                                )
                                             )
-                                        )
+                                        }
                                     }
                                 )
                                 Text(
@@ -727,17 +844,20 @@ private fun AssistantRegexCard(
                     Checkbox(
                         checked = regex.visualOnly,
                         onCheckedChange = { visualOnly ->
-                            onUpdate(
-                                assistant.copy(
-                                    regexes = assistant.regexes.mapIndexed { i, reg ->
-                                        if (i == index) {
-                                            reg.copy(visualOnly = visualOnly)
-                                        } else {
-                                            reg
+                            val latest = currentAssistant
+                            if (index < latest.regexes.size) {
+                                onUpdate(
+                                    latest.copy(
+                                        regexes = latest.regexes.mapIndexed { i, reg ->
+                                            if (i == index) {
+                                                reg.copy(visualOnly = visualOnly)
+                                            } else {
+                                                reg
+                                            }
                                         }
-                                    }
+                                    )
                                 )
-                            )
+                            }
                         }
                     )
                     Text(
@@ -748,13 +868,17 @@ private fun AssistantRegexCard(
 
                 TextButton(
                     onClick = {
-                        onUpdate(
-                            assistant.copy(
-                                regexes = assistant.regexes.filterIndexed { i, _ ->
-                                    i != index
-                                }
+                        isDeleting = true
+                        val latest = currentAssistant
+                        if (index < latest.regexes.size) {
+                            onUpdate(
+                                latest.copy(
+                                    regexes = latest.regexes.filterIndexed { i, _ ->
+                                        i != index
+                                    }
+                                )
                             )
-                        )
+                        }
                     }
                 ) {
                     Row(
