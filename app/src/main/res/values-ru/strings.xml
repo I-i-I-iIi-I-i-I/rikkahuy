@@ -728,5 +728,11 @@
   <string name="backup_page_s3_region">Регион</string>
   <string name="backup_page_s3_backup_files">Файлы резервного копирования S3</string>
   <string name="backup_page_s3_backup">Резервное копирование S3</string>
+  <string name="obfuscate">Обфускация</string>
+  <string name="obfuscation_title">Обфускация текста</string>
+  <string name="obfuscation_cyrillic_to_latin">Кириллица в латиницу</string>
+  <string name="obfuscation_invisible_chars">Невидимые символы</string>
+  <string name="obfuscation_homoglyphs">Омоглифы</string>
+  <string name="obfuscation_apply_to_all">Применить ко всем сообщениям</string>
 </resources>
 

@@ -87,6 +87,7 @@ import me.rerere.rikkahub.ui.context.LocalNavController
 import me.rerere.rikkahub.ui.context.LocalSettings
 import me.rerere.rikkahub.ui.theme.extendColors
 import me.rerere.rikkahub.utils.JsonInstant
+import me.rerere.rikkahub.utils.ObfuscationType
 import me.rerere.rikkahub.utils.base64Encode
 import me.rerere.rikkahub.utils.openUrl
 import me.rerere.rikkahub.utils.urlDecode
@@ -111,8 +112,19 @@ fun ChatMessage(
     onUpdate: (MessageNode) -> Unit,
     onTranslate: ((UIMessage, Locale) -> Unit)? = null,
     onClearTranslation: (UIMessage) -> Unit = {},
+    onObfuscateAll: (ObfuscationType) -> Unit = {},
 ) {
     val message = node.messages[node.selectIndex]
+    var highlightIndices by remember { mutableStateOf<List<Int>?>(null) }
+    var highlightKey by remember { mutableStateOf(0) }
+
+    LaunchedEffect(highlightIndices) {
+        if (highlightIndices != null) {
+            kotlinx.coroutines.delay(3000)
+            highlightIndices = null
+        }
+    }
+
     val chatMessages = conversation.currentMessages
     val messageIndex = chatMessages.indexOf(message)
     val lastMessage = messageIndex == chatMessages.lastIndex
@@ -167,6 +179,8 @@ fun ChatMessage(
                 messageIndex = messageIndex,
                 loading = loading,
                 model = model,
+                highlightIndices = highlightIndices,
+                highlightKey = highlightKey
             )
 
             message.translation?.let { translation ->
@@ -200,7 +214,15 @@ fun ChatMessage(
                         showActionsSheet = true
                     },
                     onTranslate = onTranslate,
-                    onClearTranslation = onClearTranslation
+                    onClearTranslation = onClearTranslation,
+                    onObfuscateAll = onObfuscateAll,
+                    onObfuscateResult = { result ->
+                        onUpdate(result.node)
+                        if (result.changedIndices.isNotEmpty()) {
+                            highlightIndices = result.changedIndices
+                            highlightKey++
+                        }
+                    }
                 )
             }
         }
@@ -260,7 +282,9 @@ private fun MessagePartsBlock(
     annotations: List<UIMessageAnnotation>,
     messages: List<UIMessage>,
     messageIndex: Int,
-    loading: Boolean
+    loading: Boolean,
+    highlightIndices: List<Int>? = null,
+    highlightKey: Int = 0
 ) {
     val context = LocalContext.current
     val contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
@@ -324,7 +348,9 @@ private fun MessagePartsBlock(
                             ),
                             onClickCitation = { id ->
                                 handleClickCitation(id)
-                            }
+                            },
+                            highlightIndices = highlightIndices,
+                            highlightKey = highlightKey
                         )
                     }
                 }
@@ -338,7 +364,9 @@ private fun MessagePartsBlock(
                     onClickCitation = { id ->
                         handleClickCitation(id)
                     },
-                    modifier = Modifier.animateContentSize()
+                    modifier = Modifier.animateContentSize(),
+                    highlightIndices = highlightIndices,
+                    highlightKey = highlightKey
                 )
             }
         }

@@ -91,3 +91,8 @@ fun Int.formatNumber(): String {
 
 fun Float.toFixed(digits: Int = 0) = "%.${digits}f".format(Locale.US, this)
 fun Double.toFixed(digits: Int = 0) = "%.${digits}f".format(Locale.US, this)
+
+/**
+ * Проверяет, содержит ли строка невидимые символы (Zero Width Space \u200B).
+ */
+fun String.containsInvisibleChars(): Boolean = this.contains("\u200B")

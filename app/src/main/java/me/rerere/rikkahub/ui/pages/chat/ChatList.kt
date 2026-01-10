@@ -123,6 +123,7 @@ fun ChatList(
     onTranslate: ((UIMessage, java.util.Locale) -> Unit)? = null,
     onClearTranslation: (UIMessage) -> Unit = {},
     onJumpToMessage: (Int) -> Unit = {},
+    onObfuscateAll: (me.rerere.rikkahub.utils.ObfuscationType) -> Unit = {},
 ) {
     AnimatedContent(
         targetState = previewMode,
@@ -158,6 +159,7 @@ fun ChatList(
                 onTranslate = onTranslate,
                 onClearTranslation = onClearTranslation,
                 animatedVisibilityScope = this@AnimatedContent,
+                onObfuscateAll = onObfuscateAll,
             )
         }
     }
@@ -182,6 +184,7 @@ private fun ChatListNormal(
     onTranslate: ((UIMessage, java.util.Locale) -> Unit)?,
     onClearTranslation: (UIMessage) -> Unit,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    onObfuscateAll: (me.rerere.rikkahub.utils.ObfuscationType) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val loadingState by rememberUpdatedState(loading)
@@ -297,7 +300,8 @@ private fun ChatListNormal(
                                 onUpdateMessage(it)
                             },
                             onTranslate = onTranslate,
-                            onClearTranslation = onClearTranslation
+                            onClearTranslation = onClearTranslation,
+                            onObfuscateAll = onObfuscateAll
                         )
                     }
                     if (index == conversation.truncateIndex - 1) {

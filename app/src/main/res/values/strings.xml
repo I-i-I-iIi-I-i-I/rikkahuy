@@ -730,5 +730,11 @@
   <string name="backup_page_s3_region">Region</string>
   <string name="backup_page_s3_backup_files">S3 Backup Files</string>
   <string name="backup_page_s3_backup">S3 Backup</string>
+  <string name="obfuscate">Obfuscate</string>
+  <string name="obfuscation_title">Text Obfuscation</string>
+  <string name="obfuscation_cyrillic_to_latin">Cyrillic to Latin</string>
+  <string name="obfuscation_invisible_chars">Add Invisible Characters</string>
+  <string name="obfuscation_homoglyphs">Add Homoglyphs</string>
+  <string name="obfuscation_apply_to_all">Apply to all messages</string>
 </resources>
 

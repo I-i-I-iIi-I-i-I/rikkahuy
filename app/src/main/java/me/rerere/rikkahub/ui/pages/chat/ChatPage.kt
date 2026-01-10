@@ -74,6 +74,7 @@ import me.rerere.rikkahub.utils.base64Decode
 import me.rerere.rikkahub.utils.createChatFilesByContents
 import me.rerere.rikkahub.utils.getFileMimeType
 import me.rerere.rikkahub.utils.navigateToChatPage
+import me.rerere.rikkahub.utils.obfuscate
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import kotlin.uuid.Uuid
@@ -395,6 +396,13 @@ private fun ChatPageContent(
                         chatListState.animateScrollToItem(index)
                     }
                 },
+                onObfuscateAll = { type ->
+                    val newNodes = conversation.messageNodes.map { node ->
+                        node.obfuscate(type).node
+                    }
+                    vm.updateConversation(conversation.copy(messageNodes = newNodes))
+                    vm.saveConversationAsync()
+                }
             )
         }
     }

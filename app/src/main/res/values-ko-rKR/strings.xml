@@ -730,5 +730,11 @@
   <string name="backup_page_s3_region">리전</string>
   <string name="backup_page_s3_backup_files">S3 백업 파일</string>
   <string name="backup_page_s3_backup">S3 백업</string>
+  <string name="obfuscate">난독화</string>
+  <string name="obfuscation_title">텍스트 난독화</string>
+  <string name="obfuscation_cyrillic_to_latin">키릴 문자를 라틴 문자로 변환</string>
+  <string name="obfuscation_invisible_chars">보이지 않는 문자 추가</string>
+  <string name="obfuscation_homoglyphs">동형 이의어 문자 추가</string>
+  <string name="obfuscation_apply_to_all">모든 메시지에 적용</string>
 </resources>
 
