@@ -378,6 +378,9 @@ private fun ChatPageContent(
                 onDelete = {
                     vm.deleteMessage(it)
                 },
+                onDeleteNode = {
+                    vm.deleteMessageNode(it)
+                },
                 onUpdateMessage = { newNode ->
                     vm.updateConversation(
                         conversation.copy(
