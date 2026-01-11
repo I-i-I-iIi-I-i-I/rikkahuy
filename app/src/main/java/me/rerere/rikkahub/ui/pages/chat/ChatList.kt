@@ -894,6 +894,14 @@ private fun SwipeableMessagePreviewItem(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
+                    // Показываем индикатор количества сообщений в узле
+                    if (node.messages.size > 1) {
+                        Text(
+                            text = "${node.selectIndex + 1}/${node.messages.size}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
         }
