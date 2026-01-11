@@ -139,6 +139,7 @@ import me.rerere.rikkahub.ui.components.ui.permission.rememberPermissionState
 import me.rerere.rikkahub.ui.context.LocalSettings
 import me.rerere.rikkahub.ui.context.LocalToaster
 import me.rerere.rikkahub.ui.hooks.ChatInputState
+import me.rerere.rikkahub.utils.ImageUtils
 import me.rerere.rikkahub.utils.createChatFilesByContents
 import me.rerere.rikkahub.utils.createChatTextFile
 import me.rerere.rikkahub.utils.deleteChatFiles
@@ -981,6 +982,7 @@ private fun useCropLauncher(
 ): Pair<ActivityResultLauncher<Intent>, (Uri) -> Unit> {
     val context = LocalContext.current
     var cropOutputUri by remember { mutableStateOf<Uri?>(null) }
+    var convertedSourceUri by remember { mutableStateOf<Uri?>(null) }
 
     val cropActivityLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -993,6 +995,9 @@ private fun useCropLauncher(
         // Clean up crop output file
         cropOutputUri?.toFile()?.delete()
         cropOutputUri = null
+        // Clean up converted source file if it was created
+        convertedSourceUri?.toFile()?.delete()
+        convertedSourceUri = null
         onCleanup?.invoke()
     }
 
@@ -1000,7 +1005,23 @@ private fun useCropLauncher(
         val outputFile = File(context.appTempFolder, "crop_output_${System.currentTimeMillis()}.jpg")
         cropOutputUri = Uri.fromFile(outputFile)
 
-        val cropIntent = UCrop.of(sourceUri, cropOutputUri!!)
+        // Check if source image format is compatible with UCrop (PNG or JPEG)
+        // If not, convert to PNG first
+        val actualSourceUri = if (!ImageUtils.isUCropCompatibleFormat(context, sourceUri)) {
+            Log.d("useCropLauncher", "Image format not compatible with UCrop, converting to PNG")
+            val convertedFile = File(context.appTempFolder, "converted_source_${System.currentTimeMillis()}.png")
+            val converted = ImageUtils.convertToUCropCompatibleFormat(context, sourceUri, convertedFile)
+            if (converted != null && converted != sourceUri) {
+                convertedSourceUri = converted
+                converted
+            } else {
+                sourceUri
+            }
+        } else {
+            sourceUri
+        }
+
+        val cropIntent = UCrop.of(actualSourceUri, cropOutputUri!!)
             .withOptions(UCrop.Options().apply {
                 setFreeStyleCropEnabled(true)
                 setAllowedGestures(

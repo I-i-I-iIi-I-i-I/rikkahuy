@@ -15,12 +15,101 @@ import com.google.zxing.BinaryBitmap
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.common.HybridBinarizer
+import java.io.File
 
 /**
  * 图片处理工具类
  * 提供图片压缩、旋转修正、二维码解析等功能
  */
 object ImageUtils {
+
+    /**
+     * Image format detected by BitmapFactory
+     */
+    enum class ImageFormat {
+        PNG,
+        JPEG,
+        UNKNOWN
+    }
+
+    /**
+     * Detects image format using BitmapFactory.Options.outMimeType.
+     * This method reads the actual file content (not extension) to determine the format.
+     * It does NOT load the image into memory (inJustDecodeBounds = true).
+     *
+     * @param context Android context
+     * @param uri Image URI
+     * @return ImageFormat (PNG, JPEG, or UNKNOWN)
+     */
+    fun detectImageFormat(context: Context, uri: Uri): ImageFormat {
+        return runCatching {
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true // Don't load image into memory
+            }
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream, null, options)
+            }
+            
+            when (options.outMimeType) {
+                "image/png" -> ImageFormat.PNG
+                "image/jpeg", "image/jpg" -> ImageFormat.JPEG
+                else -> ImageFormat.UNKNOWN
+            }
+        }.onFailure {
+            it.printStackTrace()
+        }.getOrDefault(ImageFormat.UNKNOWN)
+    }
+
+    /**
+     * Checks if the image format is supported by UCrop (PNG or JPEG)
+     *
+     * @param context Android context
+     * @param uri Image URI
+     * @return true if format is PNG or JPEG
+     */
+    fun isUCropCompatibleFormat(context: Context, uri: Uri): Boolean {
+        val format = detectImageFormat(context, uri)
+        return format == ImageFormat.PNG || format == ImageFormat.JPEG
+    }
+
+    /**
+     * Converts image to PNG format if it's not already PNG or JPEG.
+     * Returns the original URI if conversion is not needed, or a new URI pointing to the converted PNG file.
+     *
+     * @param context Android context
+     * @param uri Source image URI
+     * @param outputFile Output file for the converted PNG (if conversion is needed)
+     * @return URI to the image (either original or converted)
+     */
+    fun convertToUCropCompatibleFormat(
+        context: Context,
+        uri: Uri,
+        outputFile: File
+    ): Uri? {
+        val format = detectImageFormat(context, uri)
+        
+        // If already compatible, return original URI
+        if (format == ImageFormat.PNG || format == ImageFormat.JPEG) {
+            return uri
+        }
+        
+        // Convert to PNG
+        return runCatching {
+            val bitmap = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream)
+            } ?: return null
+            
+            outputFile.parentFile?.mkdirs()
+            outputFile.outputStream().use { outputStream ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+            }
+            bitmap.recycle()
+            
+            Uri.fromFile(outputFile)
+        }.onFailure {
+            it.printStackTrace()
+        }.getOrNull()
+    }
 
     /**
      * 优化的图片加载方法，避免OOM
